@@ -298,11 +298,31 @@ control dash_ingress(
         }
     }
 
-    apply {
+    action set_nhop(bit<16> port) {
+        meta.dst_l4_port = port;
+    }
 
+    // @name("next_hop|next_hop")
+    @Sai[skipHeaderGen=true]
+    table next_hop {
+        key = {
+            meta.dst_ip_addr : lpm @name("meta.dst_ip_addr:dip");
+        }
+
+        actions = {
+            set_nhop();
+            @defaultonly deny;
+        }
+    }
+
+    apply {
         /* Send packet on same port it arrived (echo) by default */
 #ifdef TARGET_BMV2_V1MODEL
-        standard_metadata.egress_spec = standard_metadata.ingress_port;
+        if (standard_metadata.ingress_port == 0) {
+            standard_metadata.egress_spec = 1;
+        } else if (standard_metadata.ingress_port == 1) {
+            standard_metadata.egress_spec = 0;
+        }
 #endif // TARGET_BMV2_V1MODEL
 #ifdef TARGET_DPDK_PNA
 #ifdef DPDK_PNA_SEND_TO_PORT_FIX_MERGED
@@ -380,7 +400,7 @@ control dash_ingress(
 
         src_tag.apply();
         dst_tag.apply();
-
+        next_hop.apply();
 
         if (meta.direction == dash_direction_t.OUTBOUND) {
             outbound.apply(hdr, meta);
