@@ -298,15 +298,17 @@ control dash_ingress(
         }
     }
 
-    action set_nhop(bit<16> port) {
-        meta.dst_l4_port = port;
+// #ifdef UNDERLAY
+#ifdef TARGET_BMV2_V1MODEL
+    action set_nhop(bit<9> next_hop_id) {
+        standard_metadata.egress_spec = next_hop_id;
     }
 
-    // @name("next_hop|next_hop")
-    @Sai[skipHeaderGen=true]
-    table next_hop {
+    @name("route|route")
+    // @Sai[skipHeaderGen=true]
+    table nhop {
         key = {
-            meta.dst_ip_addr : lpm @name("meta.dst_ip_addr:dip");
+            meta.dst_ip_addr : lpm @name("meta.dst_ip_addr:destination");
         }
 
         actions = {
@@ -314,16 +316,13 @@ control dash_ingress(
             @defaultonly deny;
         }
     }
-
+// #endif // UNDERLAY
+#endif // TARGET_BMV2_V1MODEL
+    
     apply {
         /* Send packet on same port it arrived (echo) by default */
-#ifdef TARGET_BMV2_V1MODEL
-        if (standard_metadata.ingress_port == 0) {
-            standard_metadata.egress_spec = 1;
-        } else if (standard_metadata.ingress_port == 1) {
-            standard_metadata.egress_spec = 0;
-        }
-#endif // TARGET_BMV2_V1MODEL
+// #ifdef TARGET_BMV2_V1MODEL
+// #endif // TARGET_BMV2_V1MODEL
 #ifdef TARGET_DPDK_PNA
 #ifdef DPDK_PNA_SEND_TO_PORT_FIX_MERGED
         // As of 2023-Jan-26, the version of the pna.p4 header file
@@ -400,8 +399,9 @@ control dash_ingress(
 
         src_tag.apply();
         dst_tag.apply();
-        next_hop.apply();
-
+        // #ifdef UNDERLAY
+        nhop.apply();
+        // #endif
         if (meta.direction == dash_direction_t.OUTBOUND) {
             outbound.apply(hdr, meta);
         } else if (meta.direction == dash_direction_t.INBOUND) {
