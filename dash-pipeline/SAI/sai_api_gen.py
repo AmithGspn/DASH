@@ -250,7 +250,7 @@ def get_sai_enums(program):
             member = dict()
             member['sai_name'] = enum_member['name']
             member['p4rt_value'] = enum_member['value']
-        sai_enum['members'].append(member)
+            sai_enum['members'].append(member)
         sai_enums.append(sai_enum)
 
     return sai_enums
