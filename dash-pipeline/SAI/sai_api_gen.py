@@ -59,15 +59,12 @@ def p4_annotation_to_sai_attr(p4rt, sai_attr):
                     sai_attr['isreadonly'] = kv['value']['stringValue']
                 elif kv['key'] == 'objects':
                     sai_attr['objectName'] = kv['value']['stringValue']
-                elif kv['key'] == 'skipHeaderGen':
-                    sai_attr['skipHeaderGen'] = kv['value']['boolValue']
                 elif kv['key'] == 'skipattr':
                     sai_attr['skipattr'] = kv['value']['stringValue']
                 else:
                     print("Unknown attr annotation " + kv['key'])
                     exit(1)
-    if 'type' in sai_attr:
-        sai_attr['field'] = sai_type_to_field[sai_attr['type']]
+    sai_attr['field'] = sai_type_to_field[sai_attr['type']]
 
 def p4_annotation_to_sai_table(p4rt, sai_table):
     for anno in p4rt[STRUCTURED_ANNOTATIONS_TAG]:
@@ -255,92 +252,30 @@ def get_sai_enums(program):
 
     return sai_enums
 
-# generate code for unstructured annotations
-def process_table_without_structured_annotations(program, sai_apis, table_names, table, sai_table_data, table_name):
-    all_actions = extract_action_data(program)
-    table_name, api_name = table_name.split('|')
-    if '.' in table_name:
-        sai_table_data[NAME_TAG] = table_name.split('.')[-1]
-    else:
-        sai_table_data[NAME_TAG] = table_name
-    sai_table_data['id'] = table[PREAMBLE_TAG]['id']
-    sai_table_data['with_counters'] = table_with_counters(program, sai_table_data['id'])
-
-    if ':' in table_name:
-        stage, group_name = table_name.split(':')
-        table_name = group_name
-        stage = stage.replace('.', '_')
-        sai_table_data[NAME_TAG] = table_name
-        sai_table_data[STAGE_TAG] = stage
-
-    for key in table[MATCH_FIELDS_TAG]:
-        # skip v4/v6 selector
-        if 'v4_or_v6' in key[NAME_TAG]:
-            continue
-        sai_table_data['keys'].append(get_sai_key_data(key))
-
-    for key in table[MATCH_FIELDS_TAG]:
-        # mark presence of v4/v6 selector in the parent key field
-        if 'v4_or_v6' in key[NAME_TAG]:
-            _, v4_or_v6_key_name = key[NAME_TAG].split(':')
-            for key2 in sai_table_data['keys']:
-                if "is_" + key2['sai_key_name'] + "_v4_or_v6" == v4_or_v6_key_name:
-                    key2["v4_or_v6_id"] = key['id']
-                    break
-
-    for key in sai_table_data['keys']:
-        if (key['match_type'] == 'exact' and key['type'] == 'sai_ip_address_t') or \
-           (key['match_type'] == 'ternary' and key['type'] == 'sai_ip_address_t') or \
-           (key['match_type'] == 'lpm' and key['type'] == 'sai_ip_prefix_t') or \
-           (key['match_type'] == 'list' and key['type'] == 'sai_ip_prefix_list_t'):
-            sai_table_data['ipaddr_family_attr'] = 'true'
-
-    param_names = []
-    for action in table[ACTION_REFS_TAG]:
-        action_id = action["id"]
-        if all_actions[action_id][NAME_TAG] != NOACTION and not (SCOPE_TAG in action and action[SCOPE_TAG] == 'DEFAULT_ONLY'):
-            fill_action_params(sai_table_data[ACTION_PARAMS_TAG], param_names, all_actions[action_id])
-            sai_table_data[ACTIONS_TAG].append(all_actions[action_id])
-
-    if len(sai_table_data['keys']) == 1 and sai_table_data['keys'][0]['sai_key_name'].endswith(table_name.split('.')[-1] + '_id'):
-        sai_table_data['is_object'] = 'true'
-    elif len(sai_table_data['keys']) > 5:
-        sai_table_data['is_object'] = 'true'
-    else:
-        sai_table_data['is_object'] = 'false'
-        sai_table_data['name'] = sai_table_data['name'] + '_entry'
-
-    table_names.append(sai_table_data[NAME_TAG])
-    is_new_api = True
-    for sai_api in sai_apis:
-        if sai_api['app_name'] == api_name:
-            sai_api[TABLES_TAG].append(sai_table_data)
-            is_new_api = False
-            break
-
-    if is_new_api:
-        new_api = dict()
-        new_api['app_name'] = api_name
-        new_api[TABLES_TAG] = [sai_table_data]
-        sai_apis.append(new_api)
-    return sai_apis, table_names
-
 def generate_sai_apis(program, ignore_tables):
     sai_apis = []
     table_names = []
+    all_actions = extract_action_data(program)
     sai_enums = get_sai_enums(program)
     tables = sorted(program[TABLES_TAG], key=lambda k: k[PREAMBLE_TAG][NAME_TAG])
-
     for table in tables:
+        sai_table_data = dict()
+        sai_table_data['keys'] = []
+        sai_table_data['ipaddr_family_attr'] = 'false'
+        sai_table_data[ACTIONS_TAG] = []
+        sai_table_data[ACTION_PARAMS_TAG] = []
+
+        if STRUCTURED_ANNOTATIONS_TAG in table['preamble']:
+            p4_annotation_to_sai_table(table['preamble'], sai_table_data)
         table_control, table_name = table[PREAMBLE_TAG][NAME_TAG].split('.', 1)
         if 'ignore_table' in sai_table_data.keys():
             ignore_tables.append(table_name)
         if table_name in ignore_tables:
             continue
 
-        sai_table_data = {}
-        if STRUCTURED_ANNOTATIONS_TAG in table[PREAMBLE_TAG]:
-            p4_annotation_to_sai_attr(table[PREAMBLE_TAG], sai_table_data)
+        table_name, api_name = table_name.split('|')
+        if '.' in table_name:
+            sai_table_data[NAME_TAG] = table_name.split('.')[-1]
         else:
             sai_table_data[NAME_TAG] = table_name
         sai_table_data['id'] =  table[PREAMBLE_TAG]['id']
@@ -464,6 +399,7 @@ def write_sai_files(sai_api):
     sai_header_tm = env.get_template('templates/saiapi.h.j2')
     sai_header_str = sai_header_tm.render(sai_api = sai_api)
 
+
     with open('./SAI/experimental/saiexperimental' + sai_api['app_name'].replace('_', '') + '.h', 'w') as o:
         o.write(sai_header_str)
 
@@ -573,9 +509,11 @@ for sai_api in sai_apis:
                     for table_name in all_table_names:
                         if table_ref.endswith(table_name):
                             key[OBJECT_NAME_TAG] = table_name
+
     # Write SAI dictionary into SAI API headers
     if "dash" in sai_api['app_name']:
         write_sai_files(get_uniq_sai_api(sai_api))
+        
     # Write SAI implementation 
     write_sai_impl_files(sai_api)
     sai_api_name_list.append(sai_api['app_name'].replace('_', ''))
