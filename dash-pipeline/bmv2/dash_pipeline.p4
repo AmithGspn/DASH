@@ -462,7 +462,7 @@ control dash_ingress(
         /* Underlay routing */
         meta.dst_ip_addr = (bit<128>)hdr.ipv4.dst_addr;
 #ifdef TARGET_BMV2_V1MODEL
-        underlay.apply(hrd, meta, standard_metadata);
+        underlay.apply(hdr, meta, standard_metadata);
 #endif
         if (meta.meter_policy_en == 1) {
             meter_policy.apply();
