@@ -140,6 +140,7 @@ class TestSaiVnetOutbound:
         """Verify proper packet transformation."""
 
         dataplane.set_config()
+
         SRC_VM_IP = "10.1.1.10"
         OUTER_SMAC = "00:00:05:06:06:06"
         OUR_MAC = "00:00:02:03:04:05"
@@ -241,19 +242,9 @@ class TestSaiVnetOutbound:
 
         print("\nSending outbound packet...\n\n", vxlan_pkt.__repr__())
         send_packet(dataplane, 0, vxlan_pkt)
-        time.sleep(5)
+        time.sleep(0.5)
         print("\nVerifying packet...\n", vxlan_exp_pkt.__repr__())
-        print("packet stats......................................")
-        rows = dataplane.get_all_stats()
-        print("{}".format(rows[0].name))
-        print("Tx_Frames : {}".format(rows[0].frames_tx))
-        print("Rx_Frames : {}".format(rows[0].frames_rx))
-        print("{}".format(rows[1].name))
-        print("Tx_Frames : {}".format(rows[1].frames_tx))
-        print("Rx_Frames : {}".format(rows[1].frames_rx))
-        print(dataplane, "dataplane.......................")
-        print(vxlan_exp_pkt, "constructted packet...............")
-        # verify_packet(dataplane, vxlan_exp_pkt, 0)
+        verify_packet(dataplane, vxlan_exp_pkt, 0)
 
     @pytest.mark.snappi
     def test_vnet_inbound_simple_traffic_fixed_packets(self, dpu, dataplane):
@@ -265,16 +256,8 @@ class TestSaiVnetOutbound:
         dh.scale_vnet_outbound_flows(dataplane, TEST_VNET_OUTBOUND_CONFIG, packets_per_flow=10, pps_per_flow=10)
         dataplane.set_config()
         dataplane.start_traffic()
-        # stu.wait_for(lambda: dh.check_flow_packets_metrics(dataplane, dataplane.flows[0], show=True)[0],
-        #             "Test", timeout_seconds=10)
-        time.sleep(10)
-        rows = dataplane.get_all_stats()
-        print("{}".format(rows[0].name))
-        print("Tx_Frames : {}".format(rows[0].frames_tx))
-        print("Rx_Frames : {}".format(rows[0].frames_rx))
-        print("{}".format(rows[1].name))
-        print("Tx_Frames : {}".format(rows[1].frames_tx))
-        print("Rx_Frames : {}".format(rows[1].frames_rx))
+        stu.wait_for(lambda: dh.check_flow_packets_metrics(dataplane, dataplane.flows[0], show=True)[0],
+                    "Test", timeout_seconds=10)
 
     @pytest.mark.snappi
     def test_vnet_inbound_simple_traffic_fixed_duration(self, dpu, dataplane):
