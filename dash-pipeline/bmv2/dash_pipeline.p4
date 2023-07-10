@@ -9,6 +9,7 @@
 #include "dash_outbound.p4"
 #include "dash_inbound.p4"
 #include "dash_conntrack.p4"
+#include "underlay.p4"
 
 control dash_ingress(
       inout headers_t hdr
@@ -371,27 +372,6 @@ control dash_ingress(
             set_dst_tag;
         }
     }
-
-// #ifdef UNDERLAY
-#ifdef TARGET_BMV2_V1MODEL
-    action set_nhop(bit<9> next_hop_id) {
-        standard_metadata.egress_spec = next_hop_id;
-    }
-
-    @name("route|route")
-    // @Sai[skipHeaderGen=true]
-    table nhop {
-        key = {
-            meta.dst_ip_addr : lpm @name("meta.dst_ip_addr:destination");
-        }
-
-        actions = {
-            set_nhop();
-            @defaultonly deny;
-        }
-    }
-// #endif // UNDERLAY
-#endif // TARGET_BMV2_V1MODEL
     
     apply {
         /* Send packet on same port it arrived (echo) by default */
@@ -473,15 +453,17 @@ control dash_ingress(
 
         src_tag.apply();
         dst_tag.apply();
-        // #ifdef UNDERLAY
-        nhop.apply();
-        // #endif
         if (meta.direction == dash_direction_t.OUTBOUND) {
             outbound.apply(hdr, meta);
         } else if (meta.direction == dash_direction_t.INBOUND) {
             inbound.apply(hdr, meta);
         }
 
+        /* Underlay routing */
+        meta.dst_ip_addr = (bit<128>)hdr.ipv4.dst_addr;
+#ifdef TARGET_BMV2_V1MODEL
+        underlay.apply(hrd, meta, standard_metadata);
+#endif
         if (meta.meter_policy_en == 1) {
             meter_policy.apply();
             meter_rule.apply();
