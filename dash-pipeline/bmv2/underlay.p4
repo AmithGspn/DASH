@@ -24,7 +24,7 @@ control underlay(
         // @Sai[skipHeaderGen=true]
         table underlay_routing {
             key = {
-                meta.dst_ip_addr : ternary @name("meta.dst_ip_addr:destination");
+                meta.dst_ip_addr : exact @name("meta.dst_ip_addr:destination");
             }
 
             actions = {
