@@ -36,6 +36,8 @@ control underlay(
     #endif // TARGET_BMV2_V1MODEL
 
     apply {
+#ifdef TARGET_BMV2_V1MODEL
         underlay_routing.apply();
+#endif // TARGET_BMV2_V1MODEL
     }
 }
