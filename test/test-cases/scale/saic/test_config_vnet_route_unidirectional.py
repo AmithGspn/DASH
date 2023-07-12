@@ -13,11 +13,11 @@ class TestConfigVnetRouting:
         scope=class - The file is loaded once for the whole test class
         """
         current_file_dir = Path(__file__).parent
-        with (current_file_dir / 'vnet_route_setup_commands.json').open(mode='r') as config_file:
+        with (current_file_dir / 'vnet_route_setup_commands_unidirectional.json').open(mode='r') as config_file:
             vnet_route_setup_commands = json.load(config_file)
         return vnet_route_setup_commands
 
-    def test_config_vnet_routing_create(self, dpu, vnet_in_config):
+    def test_config_vnet_routing_unidirectional_create(self, dpu, vnet_in_config):
         """
         Apply configuration that is loaded from the file.
         """
@@ -27,7 +27,7 @@ class TestConfigVnetRouting:
         pprint(results)
         assert all(results), 'Create error'
 
-    def test_config_vnet_routing_remove(self, dpu, vnet_in_config):
+    def test_config_vnet_routing_unidirectional_remove(self, dpu, vnet_in_config):
         """
         Remove configuration that is loaded from the file.
         """

@@ -23,7 +23,7 @@ SWITCH_ID = 5
 # Simple, non-scaled configuration.
 # See README.md for details.
 
-TEST_VNET_ROUTE_CONFIG = {
+TEST_VNET_ROUTE_UNIDIRECTIONAL_CONFIG = {
 
     "ENI_COUNT": 1,
     "ACL_RULES_NSG": 1,
@@ -139,10 +139,10 @@ class TestSaiVnetRoute:
         
     @pytest.mark.ptf
     @pytest.mark.snappi
-    def test_vnet_route_create(self, dpu):
+    def test_vnet_route_unidirectional_create(self, dpu):
         """Generate and apply configuration"""
 
-        with (current_file_dir / 'vnet_route_setup_commands.json').open(mode='r') as config_file:
+        with (current_file_dir / 'vnet_route_setup_commands_unidirectional.json').open(mode='r') as config_file:
             setup_commands = json.load(config_file)
         results = [*dpu.process_commands(setup_commands)]
         print("\n======= SAI commands RETURN values =======")
@@ -151,7 +151,7 @@ class TestSaiVnetRoute:
 
 
     @pytest.mark.snappi
-    def test_vnet_route_packet_forwarding_with_route_match(self, dpu, dataplane):
+    def test_vnet_route_packet_unidirectional_forwarding_with_route_match(self, dpu, dataplane):
         """Verify packet forwarding with route match"""
  
         """
@@ -159,7 +159,7 @@ class TestSaiVnetRoute:
         packets_per_flow=10 means that each possible packet path will be verified using 10 packet.
         NOTE: For BMv2 we keep here PPS limitation
         """
-        dh.scale_vnet_outbound_flows(dataplane, TEST_VNET_ROUTE_CONFIG, packets_per_flow=10, pps_per_flow=10)
+        dh.scale_vnet_outbound_flows(dataplane, TEST_VNET_ROUTE_UNIDIRECTIONAL_CONFIG, packets_per_flow=10, pps_per_flow=10)
         dataplane.set_config()
         dataplane.start_traffic()
         # stu.wait_for(lambda: dh.check_flow_packets_metrics(dataplane, dataplane.flows[0], show=True)[0],
@@ -168,18 +168,20 @@ class TestSaiVnetRoute:
         time.sleep(10)
         rows = dataplane.get_all_stats()
         print("{}".format(rows[0].name))
+        print("--------------------------")
         print("Tx_Frames : {}".format(rows[0].frames_tx))
         print("Rx_Frames : {}".format(rows[0].frames_rx))
         print("{}".format(rows[1].name))
+        print("--------------------------")
         print("Tx_Frames : {}".format(rows[1].frames_tx))
         print("Rx_Frames : {}".format(rows[1].frames_rx))
 
     @pytest.mark.ptf
     @pytest.mark.snappi
-    def test_vnet_route_simple_remove(self, dpu):
+    def test_vnet_route_unidirectional_remove(self, dpu):
         """Verify configuration removal"""
 
-        with (current_file_dir / 'vnet_route_setup_commands.json').open(mode='r') as config_file:
+        with (current_file_dir / 'vnet_route_setup_commands_unidirectional.json').open(mode='r') as config_file:
             setup_commands = json.load(config_file)
         cleanup_commands = []
         for cmd in reversed(setup_commands):
