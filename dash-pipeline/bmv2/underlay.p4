@@ -10,9 +10,9 @@ control underlay(
 #endif // TARGET_BMV2_V1MODEL
     ) 
 {
-    // #ifdef UNDERLAY
     #ifdef TARGET_BMV2_V1MODEL
         action set_nhop(bit<9> next_hop_id) {
+            // standard_metadata.egress_spec = 1;
             standard_metadata.egress_spec = next_hop_id;
         }
 
@@ -21,18 +21,20 @@ control underlay(
         }
 
         @name("route|route")
-        // @Sai[skipHeaderGen=true]
+        // TODO: To add structural annotations (example: @Sai[skipHeaderGen=true])
         table underlay_routing {
             key = {
                 meta.dst_ip_addr : lpm @name("meta.dst_ip_addr:destination");
             }
 
             actions = {
+                /* Send packet on different/same port it arrived based on routing */
                 set_nhop;
+
+                /* Send packet on same port it arrived (echo) by default */
                 @defaultonly def_act;
             }
         }
-    // #endif // UNDERLAY
     #endif // TARGET_BMV2_V1MODEL
 
     apply {

@@ -374,9 +374,6 @@ control dash_ingress(
     }
     
     apply {
-        /* Send packet on same port it arrived (echo) by default */
-// #ifdef TARGET_BMV2_V1MODEL
-// #endif // TARGET_BMV2_V1MODEL
 #ifdef TARGET_DPDK_PNA
 #ifdef DPDK_PNA_SEND_TO_PORT_FIX_MERGED
         // As of 2023-Jan-26, the version of the pna.p4 header file
