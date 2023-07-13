@@ -277,11 +277,6 @@ def generate_sai_apis(program, ignore_tables):
         if '.' in table_name:
             sai_table_data[NAME_TAG] = table_name.split('.')[-1]
         else:
-            sai_table_data['keys'] = []
-            sai_table_data['ipaddr_family_attr'] = 'false'
-            sai_table_data[ACTIONS_TAG] = []
-            sai_table_data[ACTION_PARAMS_TAG] = []
-            sai_apis, table_names = process_table_without_structured_annotations(program, sai_apis, table_names, table, sai_table_data, table_name)
             sai_table_data[NAME_TAG] = table_name
         sai_table_data['id'] =  table[PREAMBLE_TAG]['id']
         sai_table_data['with_counters'] = table_with_counters(program, sai_table_data['id'])
