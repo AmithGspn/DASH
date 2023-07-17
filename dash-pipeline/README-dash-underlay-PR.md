@@ -9,7 +9,7 @@ The current implementation defaults to an "echo" behavior, where the packet is r
 
 **Main Changes**
 - Add Underlay routing table P4 logic for routing the packets based on match.
-- Add VNet API for testing the functionality.
+- Add VNET API for testing the functionality.
 - Add the following test cases
     - Routing Unidirectional (Send packet from one port and receive the packet on other port upon route match)
     - Routing Bidirectional (Send packets from both ports of bmv2 switch and receive the packets on other ports upon route match)
