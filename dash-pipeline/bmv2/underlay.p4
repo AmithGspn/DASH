@@ -85,7 +85,24 @@ control underlay(
         }
     }
 
+    action set_dst_mac_address(EthernetAddress dst_mac_address) {
+        // Not sure if it is a src_mac or dst_mac
+        meta.encap_data.underlay_dmac = dst_mac_address;
+    }
+
+    @name("neighbor|dash_neighbor")
+    table neighbor_entry {
+        key = {
+            meta.lkup_dst_ip_addr : exact @name("meta.lkup_dst_ip_addr:ip_address");
+        }
+
+        actions = {
+            set_dst_mac_address;
+        }
+    }
+
     apply {
+        neighbor_entry.apply();
         underlay_routing.apply();
     }
 }
